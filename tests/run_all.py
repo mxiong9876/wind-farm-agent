@@ -1,38 +1,40 @@
-"""Run every stage test in order. Stops at the first failure."""
+"""Run both encoder suites.
 
+    python3 tests/run_all.py              (from anywhere; no PYTHONPATH needed)
+
+Each suite runs in its OWN process. That is the point: the two encoders are
+independent, so a failure in one must not stop the other from reporting. A
+crash or a hung import on one side cannot take the other down with it.
+
+To run just one:
+
+    python3 tests/scada/run_all.py
+    python3 tests/vibration/run_all.py
+"""
+
+import os
+import subprocess
 import sys
-import traceback
 
-import test_stage1_stem
-import test_stage2_causalconv
-import test_stage3_channelnorm
-import test_stage4_causalblock
-import test_stage5_trunk
-import test_stage6_revin
-import test_stage7_fold
-import test_stage8_tokens
-import test_stage9_channel_identity
-import test_stage10_resampler
+_HERE = os.path.dirname(os.path.abspath(__file__))
 
-STAGES = [
-    ("1 stem", test_stage1_stem),
-    ("2 causal conv", test_stage2_causalconv),
-    ("3 channel norm", test_stage3_channelnorm),
-    ("4 causal block", test_stage4_causalblock),
-    ("5 trunk", test_stage5_trunk),
-    ("6 revin", test_stage6_revin),
-    ("7 fold", test_stage7_fold),
-    ("8 tokens", test_stage8_tokens),
-    ("9 channel identity", test_stage9_channel_identity),
-    ("10 resampler", test_stage10_resampler),
+SUITES = [
+    ("SCADA", os.path.join(_HERE, "scada", "run_all.py")),
+    ("vibration", os.path.join(_HERE, "vibration", "run_all.py")),
 ]
 
 if __name__ == "__main__":
-    for name, mod in STAGES:
-        try:
-            mod.test()
-        except AssertionError:
-            print(f"\nFAILED at stage {name}\n")
-            traceback.print_exc()
-            sys.exit(1)
-    print("\nall stages passed\n")
+    results = []
+    for name, path in SUITES:
+        # flush: this process's stdout is block-buffered when piped, but the
+        # children write straight through, so without it every header lands
+        # after the output it is supposed to introduce
+        print(f"\n{'=' * 60}\n  {name} suite\n{'=' * 60}", flush=True)
+        # same interpreter that launched this, so a venv is respected
+        results.append((name, subprocess.run([sys.executable, path]).returncode))
+
+    print(f"\n{'=' * 60}\n  summary\n{'=' * 60}")
+    for name, code in results:
+        print(f"  {name:<12} {'PASS' if code == 0 else f'FAIL (exit {code})'}")
+
+    sys.exit(0 if all(c == 0 for _, c in results) else 1)
