@@ -59,11 +59,18 @@ class Probe(nn.Module):
         super().__init__()
         self.enc = ScadaTCNEncoder(d_model=d, n_channels=C, context_len=T)
         self.resampler = PerceiverResampler(d_model=d, n_latents=n_latents)
+        # Pooling leaves every dim a DC offset ~49x its per-window spread, which
+        # strands the head at chance. Needs per-dimension normalization from
+        # CURRENT statistics: LayerNorm normalizes the wrong axis, running stats
+        # lag the co-training encoder and diverge. Before pooling so B=1 works.
+        self.norm = nn.BatchNorm1d(d)
         self.head = nn.Linear(d, 1)
 
     def forward(self, x, mask, cat, static):
         seq = self.enc(x, mask, cat, static)
         z = self.resampler(seq)             # (B, n_latents, d)
+        B, L, d = z.shape
+        z = self.norm(z.reshape(B * L, d)).reshape(B, L, d)
         return self.head(z.mean(dim=1)).squeeze(-1)
 
 
