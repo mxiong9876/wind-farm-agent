@@ -43,11 +43,23 @@ the way to blame. It is deterministic: no learning rate, no step count, nothing
 that can make the test flaky on a bad seed. Trainability is covered separately
 by smoke 1 and smoke 2.
 
-Run this before spending any cluster time.
+Run this before spending any cluster time:
+
+    python3 tests/fusion/smoke_test.py    (from anywhere; no PYTHONPATH needed)
 """
 
 import math
+import os
+import sys
 import time
+
+# tests/fusion, tests, and the repo root, so `helpers` and the model modules
+# resolve no matter which directory this is invoked from. Same bootstrap the
+# run_all.py files carry; without it this only runs from the repo root with
+# PYTHONPATH set, which is not what the line above promises.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_TESTS = os.path.dirname(_HERE)
+sys.path[:0] = [_HERE, _TESTS, os.path.dirname(_TESTS)]
 
 import torch
 import torch.nn as nn
