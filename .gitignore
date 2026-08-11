@@ -69,6 +69,16 @@ mlruns/
 tensorboard/
 *.log
 
+# --- Presentations & documents ---
+# binary, so diffs are useless and every re-save rewrites the whole blob.
+# Slide decks live in shared drives; git tracks the code they describe.
+*.pptx
+*.ppt
+*.docx
+*.doc
+*.xlsx
+*.xls
+
 # --- Secrets ---
 .env
 .env.*
