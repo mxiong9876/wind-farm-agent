@@ -1,15 +1,24 @@
-"""Run both encoder suites.
+"""Run every stage-test suite.
 
     python3 tests/run_all.py              (from anywhere; no PYTHONPATH needed)
 
-Each suite runs in its OWN process. That is the point: the two encoders are
-independent, so a failure in one must not stop the other from reporting. A
-crash or a hung import on one side cannot take the other down with it.
+Each suite runs in its OWN process. That is the point: the suites are
+independent, so a failure in one must not stop the others from reporting. A
+crash or a hung import on one side cannot take the others down with it.
 
 To run just one:
 
     python3 tests/scada/run_all.py
     python3 tests/vibration/run_all.py
+    python3 tests/fusion/run_all.py
+
+SMOKE TESTS ARE NOT RUN HERE. Stage tests are seconds and check the forward
+pass, so they are cheap enough for every change. The smoke tests train, which
+puts them in minutes, and they answer a different question -- can this thing
+actually learn. Run them before spending cluster time, not before every commit:
+
+    python3 tests/vibration/smoke_test.py
+    python3 tests/fusion/smoke_test.py
 """
 
 import os
@@ -21,6 +30,10 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 SUITES = [
     ("SCADA", os.path.join(_HERE, "scada", "run_all.py")),
     ("vibration", os.path.join(_HERE, "vibration", "run_all.py")),
+    # last on purpose: fusion imports both encoders, so if they are broken the
+    # encoder suites should say so first rather than surfacing it as a fusion
+    # failure
+    ("fusion", os.path.join(_HERE, "fusion", "run_all.py")),
 ]
 
 if __name__ == "__main__":
