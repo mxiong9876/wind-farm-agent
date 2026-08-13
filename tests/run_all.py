@@ -30,10 +30,14 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 SUITES = [
     ("SCADA", os.path.join(_HERE, "scada", "run_all.py")),
     ("vibration", os.path.join(_HERE, "vibration", "run_all.py")),
-    # last on purpose: fusion imports both encoders, so if they are broken the
-    # encoder suites should say so first rather than surfacing it as a fusion
-    # failure
+    # after the encoders on purpose: fusion imports both, so if they are broken
+    # the encoder suites should say so first rather than surfacing it as a
+    # fusion failure
     ("fusion", os.path.join(_HERE, "fusion", "run_all.py")),
+    # the loader depends on no model at all, so its position is arbitrary --
+    # last because it is the only suite that can SKIP (data/ is gitignored) and
+    # a skip is easiest to notice at the end
+    ("kelmarsh", os.path.join(_HERE, "kelmarsh", "run_all.py")),
 ]
 
 if __name__ == "__main__":

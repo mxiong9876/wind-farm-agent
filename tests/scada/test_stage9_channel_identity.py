@@ -1,7 +1,7 @@
 """Stage 9 -- channel identity: tell fusion which sensor each token came from."""
 
 import torch
-from scada_encoder_tcn import ScadaTCNEncoder
+from models.scada_encoder_tcn import ScadaTCNEncoder
 from helpers import banner, report
 
 

@@ -4,7 +4,7 @@ This is the stage where BatchNorm/GroupNorm would silently destroy causality.
 """
 
 import torch
-from scada_encoder_tcn import ChannelNorm
+from models.scada_encoder_tcn import ChannelNorm
 from helpers import banner, check_shape, check_causal, report
 
 

@@ -10,7 +10,7 @@ Two failure modes live here, and neither announces itself:
 
 import torch
 
-from vibration_encoder_2dconv import ConvBlock2d, VibrationConv2dEncoder
+from models.vibration_encoder_2dconv import ConvBlock2d, VibrationConv2dEncoder
 from helpers import banner, report
 
 L = 25600

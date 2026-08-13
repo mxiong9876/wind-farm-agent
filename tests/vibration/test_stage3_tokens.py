@@ -11,7 +11,7 @@ borrow the shared PerceiverResampler.
 
 import torch
 
-from vibration_encoder_2dconv import VibrationConv2dEncoder
+from models.vibration_encoder_2dconv import VibrationConv2dEncoder
 from helpers import banner, check_shape, report
 
 L = 25600
@@ -106,7 +106,7 @@ def test():
            not dsp_keys, fmt="{:.0f}")
 
     # --- interop with the SCADA resampler ---------------------------------
-    from scada_encoder_tcn import PerceiverResampler
+    from models.scada_encoder_tcn import PerceiverResampler
     r = PerceiverResampler(d_model=128, n_latents=32).eval()
     with torch.no_grad():
         check_shape("vibration -> shared resampler", r(out), (B, 32, 128))

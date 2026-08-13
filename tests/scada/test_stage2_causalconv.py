@@ -1,7 +1,7 @@
 """Stage 2 -- CausalConv: mixes across time, but only backwards."""
 
 import torch
-from scada_encoder_tcn import CausalConv
+from models.scada_encoder_tcn import CausalConv
 from helpers import banner, check_shape, check_causal
 
 

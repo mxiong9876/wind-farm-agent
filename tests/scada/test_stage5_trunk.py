@@ -1,7 +1,7 @@
 """Stage 5 -- TCNTrunk: stem plus a dilated stack."""
 
 import torch
-from scada_encoder_tcn import TCNTrunk
+from models.scada_encoder_tcn import TCNTrunk
 from helpers import banner, check_shape, check_trunk_causal, report
 
 

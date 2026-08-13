@@ -52,7 +52,7 @@ out neutral. They do not: a silent snapshot is a perfectly valid input that
 means "this sensor reads zero", which is not the same claim as "this sensor
 does not exist".
 
-    from multimodal_fusion import MultiModalFusion, StubEncoder
+    from models.multimodal_fusion import MultiModalFusion, StubEncoder
     fusion = MultiModalFusion({"scada": scada_enc, "vibration": vib_enc,
                                "acoustic": StubEncoder(), "rgbd": StubEncoder()})
     health = fusion({"scada": {"x": xs, "mask": ms},
@@ -62,7 +62,7 @@ does not exist".
 import torch
 import torch.nn as nn
 
-from scada_encoder_tcn import PerceiverResampler
+from models.scada_encoder_tcn import PerceiverResampler
 
 
 class StubEncoder(nn.Module):
@@ -279,8 +279,8 @@ class MultiModalFusion(nn.Module):
 
 
 if __name__ == "__main__":
-    from scada_encoder_tcn import ScadaTCNEncoder
-    from vibration_encoder_2dconv import VibrationConv2dEncoder
+    from models.scada_encoder_tcn import ScadaTCNEncoder
+    from models.vibration_encoder_2dconv import VibrationConv2dEncoder
 
     torch.manual_seed(0)
     B = 2
