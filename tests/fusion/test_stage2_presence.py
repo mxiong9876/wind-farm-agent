@@ -14,7 +14,7 @@ import itertools
 
 import torch
 
-from multimodal_fusion import MultiModalFusion, StubEncoder
+from models.multimodal_fusion import MultiModalFusion, StubEncoder
 from helpers import banner, report
 
 D, K = 128, 32

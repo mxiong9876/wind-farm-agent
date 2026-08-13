@@ -6,7 +6,7 @@ running-statistics variant, since future samples do not exist at decision time.
 """
 
 import torch
-from scada_encoder_tcn import RevIN
+from models.scada_encoder_tcn import RevIN
 from helpers import banner, check_shape, report
 
 

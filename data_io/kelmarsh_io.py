@@ -170,6 +170,30 @@ def load_farm(scada_dir, turbines=range(1, 7), **kw):
             torch.cat(ids), torch.cat(ys))
 
 
+def load_years(root="data/kelmarsh", years=range(2016, 2022), **kw):
+    """Every year directory under `root` -> one concatenated dataset.
+
+    SPLIT BY YEAR, NOT BY POSITION WITHIN A YEAR. Cutting a single year at 70%
+    puts summer in train and winter in test, and every channel here has an
+    annual cycle -- measured on 2016, a probe fitted that way scores R^2 -12.5
+    predicting held-out ambient temperature and BELOW CHANCE on month. The
+    features are fine; the split makes train and test different domains, and a
+    linear probe reports that as "no signal".
+    """
+    xs, ms, es, ids, ys = [], [], [], [], []
+    for y in years:
+        d = os.path.join(root, f"scada_{y}")
+        if not os.path.isdir(d):
+            continue
+        x, m, e, t, lab = load_farm(d, **kw)
+        xs.append(x); ms.append(m); es.append(e); ids.append(t); ys.append(lab)
+
+    if not xs:
+        raise FileNotFoundError(f"no scada_<year> directories under {root}")
+    return (torch.cat(xs), torch.cat(ms),
+            pd.DatetimeIndex(np.concatenate(es)), torch.cat(ids), torch.cat(ys))
+
+
 if __name__ == "__main__":
     SCADA = "data/kelmarsh/scada_2016"
 

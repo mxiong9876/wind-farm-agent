@@ -1,7 +1,7 @@
 """Stage 1 -- Stem: (value, mask) at each timestep -> d_model features."""
 
 import torch
-from scada_encoder_tcn import Stem
+from models.scada_encoder_tcn import Stem
 from helpers import banner, check_shape, report
 
 

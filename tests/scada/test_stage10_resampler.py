@@ -6,7 +6,7 @@ Part C: compress a variable-length sequence to a fixed 32 latents
 """
 
 import torch
-from scada_encoder_tcn import PerceiverResampler, ResamplerLayer
+from models.scada_encoder_tcn import PerceiverResampler, ResamplerLayer
 from helpers import banner, check_shape, report
 
 
@@ -116,7 +116,7 @@ def test_encoder_tail(enc_cls=None):
     torch.manual_seed(0)
     B, C, T, d = 4, 20, 600, 128
 
-    from scada_encoder_tcn import ScadaTCNEncoder
+    from models.scada_encoder_tcn import ScadaTCNEncoder
     try:
         enc = ScadaTCNEncoder(d_model=d, n_channels=C, context_len=T,
                               n_static=7).eval()

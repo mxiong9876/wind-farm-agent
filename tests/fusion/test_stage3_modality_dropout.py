@@ -14,7 +14,7 @@ has to obey are narrow, and all three failure modes are silent:
 
 import torch
 
-from multimodal_fusion import MultiModalFusion, StubEncoder
+from models.multimodal_fusion import MultiModalFusion, StubEncoder
 from helpers import banner, report
 
 D, K = 128, 32

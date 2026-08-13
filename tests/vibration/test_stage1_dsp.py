@@ -13,7 +13,7 @@ import math
 
 import torch
 
-from vibration_encoder_2dconv import VibrationDSP, linear_filterbank
+from models.vibration_encoder_2dconv import VibrationDSP, linear_filterbank
 from helpers import banner, check_shape, report
 
 FS = 25600.0

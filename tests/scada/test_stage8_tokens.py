@@ -1,7 +1,7 @@
 """Stage 8 -- subsample to tokens and hand off to transformer axis order."""
 
 import torch
-from scada_encoder_tcn import ScadaTCNEncoder
+from models.scada_encoder_tcn import ScadaTCNEncoder
 from helpers import TOL, banner, check_shape, report
 
 

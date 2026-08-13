@@ -40,8 +40,8 @@ sys.path[:0] = [_HERE, _TESTS, os.path.dirname(_TESTS)]
 import torch
 import torch.nn as nn
 
-from vibration_encoder_2dconv import VibrationConv2dEncoder
-from scada_encoder_tcn import PerceiverResampler
+from models.vibration_encoder_2dconv import VibrationConv2dEncoder
+from models.scada_encoder_tcn import PerceiverResampler
 from helpers import banner, report
 
 FS = 25600.0

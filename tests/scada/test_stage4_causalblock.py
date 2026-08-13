@@ -1,7 +1,7 @@
 """Stage 4 -- CausalBlock: two convs, norms, activations, plus a residual."""
 
 import torch
-from scada_encoder_tcn import CausalBlock
+from models.scada_encoder_tcn import CausalBlock
 from helpers import banner, check_shape, check_causal, report
 
 
