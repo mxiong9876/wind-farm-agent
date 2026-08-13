@@ -4,10 +4,20 @@ The stage tests verify the FORWARD pass. This verifies the model can actually
 LEARN -- gradients reach every parameter, and the thing can fit a signal. A
 model can pass every shape and causality check and still be untrainable.
 
-Run this before spending any cluster time.
+Run this before spending any cluster time:
+
+    python3 tests/scada/smoke_test.py     (from anywhere; no PYTHONPATH needed)
 """
 
+import os
+import sys
 import time
+
+# tests/scada, tests, and the repo root, so `helpers` and the encoder modules
+# resolve no matter which directory this is invoked from
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_TESTS = os.path.dirname(_HERE)
+sys.path[:0] = [_HERE, _TESTS, os.path.dirname(_TESTS)]
 
 import torch
 import torch.nn as nn

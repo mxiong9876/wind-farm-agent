@@ -21,11 +21,21 @@ So this does not just check that something trains. It checks that the envelope
 demodulation branch carries information a head can use -- closing the loop with
 vibration stage 1, which proves only that the frontend REPRESENTS the fault.
 
-Run this before spending any cluster time.
+Run this before spending any cluster time:
+
+    python3 tests/vibration/smoke_test.py  (from anywhere; no PYTHONPATH needed)
 """
 
 import math
+import os
+import sys
 import time
+
+# tests/vibration, tests, and the repo root, so `helpers` and the encoder
+# modules resolve no matter which directory this is invoked from
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_TESTS = os.path.dirname(_HERE)
+sys.path[:0] = [_HERE, _TESTS, os.path.dirname(_TESTS)]
 
 import torch
 import torch.nn as nn
