@@ -19,7 +19,7 @@ a variable-length (B, S, d_model) sequence at d_model=128, channel-major, with
 a learned channel embedding already added. Both encoders therefore feed the
 SAME PerceiverResampler and arrive at fusion as (B, 32, 128).
 
-    from models.scada_encoder_tcn import PerceiverResampler
+    from models.common import PerceiverResampler
     tokens = VibrationConv2dEncoder()(x, mask)          # (B, 48, 128)
     latents = PerceiverResampler(d_model=128)(tokens)   # (B, 32, 128)
 """
