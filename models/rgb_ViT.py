@@ -41,10 +41,18 @@ class RGBEncoder(nn.Module):
     """Frozen DINOv2 ViT -> d_model tokens the fusion can consume."""
 
     def __init__(self, d_model=128, model_name="vit_base_patch14_dinov2.lvd142m",
-                 pretrained=True, freeze_backbone=True, keep_cls=True):
+                 pretrained=True, freeze_backbone=True, keep_cls=True,
+                 dynamic_img_size=True):
         super().__init__()
+        # dynamic_img_size interpolates the position embeddings, so any size
+        # that is a multiple of the patch grid works. Without it timm hard-
+        # asserts the checkpoint's native 518x518 and every other size dies
+        # deep inside patch_embed with a message about the model, not the call.
+        # Blade photos are not going to arrive pre-cropped to 518 squares.
         self.vit = timm.create_model(model_name, pretrained=pretrained,
-                                     num_classes=0)
+                                     num_classes=0,
+                                     dynamic_img_size=dynamic_img_size)
+        self.dynamic = dynamic_img_size
         self.keep_cls = keep_cls
         self.frozen = freeze_backbone
         if freeze_backbone:
@@ -85,12 +93,19 @@ class RGBEncoder(nn.Module):
     def forward(self, x, mask=None):
         B, C, H, W = x.shape
         assert C == 3, f"expected 3 colour channels, got {C}"
-        # a patch-14 backbone silently mis-tiles a non-multiple size rather than
-        # raising, and the resulting token grid does not correspond to the image
         assert H % self.patch == 0 and W % self.patch == 0, (
             f"{H}x{W} is not a multiple of patch size {self.patch}; "
             f"resize to e.g. {H // self.patch * self.patch}x"
             f"{W // self.patch * self.patch}")
+        # with dynamic_img_size off, timm accepts ONLY the checkpoint's native
+        # size and rejects anything else inside patch_embed with a message that
+        # names the model rather than the caller. Say it here instead.
+        if not self.dynamic:
+            native = self.vit.patch_embed.img_size
+            assert (H, W) == tuple(native), (
+                f"{H}x{W} but this backbone was built with dynamic_img_size="
+                f"False, which accepts only {native[0]}x{native[1]}. "
+                f"Pass dynamic_img_size=True to allow other sizes.")
 
         if self.frozen:
             with torch.no_grad():
