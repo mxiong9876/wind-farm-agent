@@ -106,7 +106,7 @@ def test():
            not dsp_keys, fmt="{:.0f}")
 
     # --- interop with the SCADA resampler ---------------------------------
-    from models.scada_encoder_tcn import PerceiverResampler
+    from models.common import PerceiverResampler
     r = PerceiverResampler(d_model=128, n_latents=32).eval()
     with torch.no_grad():
         check_shape("vibration -> shared resampler", r(out), (B, 32, 128))

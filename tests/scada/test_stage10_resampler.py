@@ -6,7 +6,7 @@ Part C: compress a variable-length sequence to a fixed 32 latents
 """
 
 import torch
-from models.scada_encoder_tcn import PerceiverResampler, ResamplerLayer
+from models.common import PerceiverResampler, ResamplerLayer
 from helpers import banner, check_shape, report
 
 
