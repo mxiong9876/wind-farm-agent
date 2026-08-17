@@ -62,7 +62,7 @@ does not exist".
 import torch
 import torch.nn as nn
 
-from models.scada_encoder_tcn import PerceiverResampler
+from models.common import PerceiverResampler
 
 
 class StubEncoder(nn.Module):

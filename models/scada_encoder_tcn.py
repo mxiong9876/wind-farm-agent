@@ -171,32 +171,14 @@ class ScadaTCNEncoder(nn.Module):
 
         return seq
 
-class ResamplerLayer(nn.Module):
-    def __init__(self, d_model=128, n_heads=8):
-        super().__init__()
-        self.norm_l  = nn.LayerNorm(d_model)
-        self.norm_x  = nn.LayerNorm(d_model)
-        self.attn    = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
-        self.norm_ff = nn.LayerNorm(d_model)
-        self.ff      = nn.Sequential(nn.Linear(d_model, 4*d_model), nn.GELU(), nn.Linear(4*d_model, d_model))
 
-    def forward(self, z, x):
-        q = self.norm_l(z)
-        kv = self.norm_x(x)
-        z = z + self.attn(q, kv, kv)[0]
-        z = z + self.ff(self.norm_ff(z))
-
-        return z
-
-class PerceiverResampler(nn.Module):
-    def __init__(self, d_model=128, n_latents=32, n_heads=8, n_layers=2):
-        super().__init__()
-        self.latents = nn.Parameter(torch.randn(n_latents, d_model) * 0.02)
-        self.layers = nn.ModuleList([ResamplerLayer(d_model, n_heads) for _ in range(n_layers)])
-
-    def forward(self, x):
-        z = self.latents.unsqueeze(0).expand(x.size(0), -1, -1)
-        for layer in self.layers:
-            z = layer(z, x)
-
-        return z
+# ResamplerLayer and PerceiverResampler used to live here. They are SHARED --
+# every modality collapses its own token count onto the same 32 latents with
+# them -- so they now live in models/common.py and are re-exported here only so
+# older imports keep working.
+#
+# Import them from models.common in new code. Two copies is how they drifted
+# apart in the first place: this file's version was missing the
+# need_weights=False that common.py's has, and since every caller imported from
+# HERE, the fix was dead code and every run paid ~37% extra in the resampler.
+from models.common import ResamplerLayer, PerceiverResampler  # noqa: F401,E402
