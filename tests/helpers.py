@@ -4,18 +4,47 @@ Every stage test imports from here so the causality check and the pass/fail
 reporting stay identical across files.
 """
 
+import sys
+
 import torch
+
+# Line-buffer stdout for the whole process. The explicit flush=True below only
+# covers prints that route through these helpers; every suite also prints
+# context lines directly ("cached 384 train / 192 test", "windows 11105"), and
+# those are exactly the lines that explain a failure. Reconfiguring the stream
+# catches them too, so no future print has to remember.
+#
+# Guarded because stdout is not always a TextIOWrapper -- under some capture
+# harnesses it is a plain object with no reconfigure, and a test suite must not
+# fail on the way it is being watched.
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except (AttributeError, ValueError):
+    pass
 
 TOL = 1e-4          # float32 noise sits around 1e-6; a real leak is order 1.0
 
+# Every print here flushes. Python line-buffers stdout to a terminal but
+# BLOCK-buffers it to a pipe or a file, so `run_all.py | tee log` holds output
+# in a 4-8KB buffer until it fills. A suite killed before that -- a laptop
+# closing, a session ending, an out-of-memory kill -- loses everything it had
+# already reported, and the surviving evidence is an empty log rather than the
+# assertions that passed. Measured twice on this project: a training run and
+# the vlm suite both produced no output at all when interrupted while piped.
+#
+# The vlm suite is the reason this is not merely tidy. It loads a multi-GB
+# checkpoint, so it is the slowest suite and the likeliest to be interrupted,
+# and without flushing an interrupted run is indistinguishable from one that
+# never started.
+
 
 def banner(name):
-    print(f"\n=== {name} ===")
+    print(f"\n=== {name} ===", flush=True)
 
 
 def report(label, value, ok, fmt="{:.2e}"):
     status = "PASS" if ok else "FAIL"
-    print(f"  {label:<38} {fmt.format(value):>12}  {status}")
+    print(f"  {label:<38} {fmt.format(value):>12}  {status}", flush=True)
     assert ok, f"{label}: {value}"
 
 
@@ -63,5 +92,5 @@ def check_shape(name, tensor, expected):
     got = tuple(tensor.shape)
     ok = got == tuple(expected)
     status = "PASS" if ok else "FAIL"
-    print(f"  {name:<38} {str(got):>12}  {status}")
+    print(f"  {name:<38} {str(got):>12}  {status}", flush=True)
     assert ok, f"{name}: got {got}, expected {tuple(expected)}"
