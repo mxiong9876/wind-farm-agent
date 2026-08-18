@@ -137,40 +137,19 @@ class RGBEncoder(nn.Module):
 
 
 if __name__ == "__main__":
+    # A demo, not a test. The checks that were here now live in
+    # tests/rgb/smoke_test.py, where a failure exits non-zero and
+    # tests/run_all.py picks it up.
     torch.manual_seed(0)
     enc = RGBEncoder(d_model=128, pretrained=False).eval()
-    x = torch.rand(2, 3, 518, 518)
-    x = enc.preprocess(x)
-
+    x = enc.preprocess(torch.rand(2, 3, 518, 518))
     with torch.no_grad():
         out = enc(x)
+
     n_tr = sum(p.numel() for p in enc.parameters() if p.requires_grad)
     n_fz = sum(p.numel() for p in enc.parameters() if not p.requires_grad)
-    print(f"tokens            {tuple(out.shape)}  = 1 CLS + "
+    print(f"tokens      {tuple(out.shape)}  = 1 CLS + "
           f"{(518 // enc.patch) ** 2} patches")
-    print(f"trainable         {n_tr:,}")
-    print(f"frozen            {n_fz:,}")
-
-    enc.train()
-    print(f"vit stays eval    {not enc.vit.training}")
-
-    # the frozen path must be deterministic in TRAIN mode too, which is the
-    # whole point of the train() override
-    with torch.no_grad():
-        a, b = enc(x), enc(x)
-    print(f"deterministic     {torch.equal(a, b)}")
-
-    out = enc(x)
-    out.sum().backward()
-    print(f"proj gets grad    {enc.proj[1].weight.grad is not None}")
-    print(f"vit gets no grad  {enc.vit.patch_embed.proj.weight.grad is None}")
-
-    with torch.no_grad():
-        dead = enc(x, mask=torch.tensor([1.0, 0.0]))
-    print(f"mask zeroes frame {bool((dead[1] == 0).all())} "
-          f"and keeps the other {bool((dead[0] != 0).any())}")
-
-    try:
-        enc(torch.rand(1, 3, 500, 500))
-    except AssertionError as e:
-        print(f"rejects bad size  {str(e)[:52]}...")
+    print(f"trainable   {n_tr:,}")
+    print(f"frozen      {n_fz:,}  ({n_tr / (n_tr + n_fz) * 100:.2f}% trainable)")
+    print(f"patch size  {enc.patch}   dynamic_img_size {enc.dynamic}")

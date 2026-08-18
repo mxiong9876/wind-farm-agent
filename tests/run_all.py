@@ -38,6 +38,10 @@ SUITES = [
     # last because it is the only suite that can SKIP (data/ is gitignored) and
     # a skip is easiest to notice at the end
     ("kelmarsh", os.path.join(_HERE, "kelmarsh", "run_all.py")),
+    # both depend on a downloaded checkpoint and SKIP without it, so they sit
+    # beside kelmarsh at the end where a skip is easiest to notice
+    ("rgb", os.path.join(_HERE, "rgb", "run_all.py")),
+    ("vlm", os.path.join(_HERE, "vlm", "run_all.py")),
 ]
 
 if __name__ == "__main__":
