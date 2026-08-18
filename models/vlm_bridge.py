@@ -76,20 +76,29 @@ class FusionProjector(nn.Module):
     def __init__(self, d_fusion, d_lm, n_soft=8, target_norm=1.0):
         super().__init__()
         self.n_soft, self.d_lm = n_soft, d_lm
+        # A SHARED trunk, then per-slot FiLM. The obvious alternative --
+        # Linear(4*d_lm, n_soft*d_lm) to emit all K tokens at once -- costs
+        # 134M parameters at d_lm 2048 and 537M at 4096, which is not an
+        # adapter but a small model, and it would memorise the few thousand
+        # pairs this is trainable on. Broadcasting one trunk output and giving
+        # each slot its own scale and shift keeps the K tokens distinct for
+        # 2 * n_soft * d_lm extra weights -- 32k here instead of 134M.
         self.net = nn.Sequential(
             nn.LayerNorm(d_fusion),
-            nn.Linear(d_fusion, 4 * d_lm),
+            nn.Linear(d_fusion, d_lm),
             nn.GELU(),
-            nn.Linear(4 * d_lm, n_soft * d_lm),
+            nn.Linear(d_lm, d_lm),
         )
+        self.slot_scale = nn.Parameter(torch.ones(n_soft, d_lm))
+        self.slot_shift = nn.Parameter(torch.randn(n_soft, d_lm) * 0.02)
         self.out_norm = nn.LayerNorm(d_lm)
         # buffer, not a constant: it is measured from the loaded checkpoint's
         # embedding table and must follow the model onto GPU and into a save
         self.register_buffer("target_norm", torch.tensor(float(target_norm)))
 
     def forward(self, health):
-        z = self.net(health).view(-1, self.n_soft, self.d_lm)
-        z = self.out_norm(z)
+        h = self.net(health).unsqueeze(1)                    # (B, 1, d_lm)
+        z = self.out_norm(h * self.slot_scale + self.slot_shift)  # (B, K, d_lm)
         z = z / z.norm(dim=-1, keepdim=True).clamp(min=1e-6) * self.target_norm
         return z
 
@@ -121,8 +130,15 @@ class FusionToVLM(nn.Module):
 
         emb = self.vlm.get_input_embeddings().weight
         target = emb.detach().float().norm(dim=-1).median().item()
+        # The projector stays in FLOAT32 while the frozen VLM is whatever dtype
+        # it loaded in (usually bfloat16). Casting the projector down to match
+        # breaks on the first forward -- LayerNorm rejects a bf16 parameter fed
+        # a float32 input -- and it is the wrong fix anyway: this is the only
+        # module that learns, and fp32 master weights for the trainable part
+        # with a low-precision frozen backbone is the standard mixed-precision
+        # arrangement. The cast happens on the OUTPUT, at the splice.
         self.projector = FusionProjector(d_fusion, d_lm, n_soft, target)
-        self.projector.to(emb.dtype)
+        self.lm_dtype = emb.dtype
 
         self.frozen = freeze_vlm
         if freeze_vlm:
@@ -162,7 +178,9 @@ class FusionToVLM(nn.Module):
         all, so scoring either one trains the model to reproduce its own input.
         """
         dev = next(self.vlm.parameters()).device
-        soft = self.projector(health.to(dev))                    # (B, K, d_lm)
+        # fp32 through the projector, then down to the LM's dtype for the splice
+        soft = self.projector(health.to(dev, torch.float32))      # (B, K, d_lm)
+        soft = soft.to(self.lm_dtype)
         B = soft.shape[0]
 
         embed = self.vlm.get_input_embeddings()
@@ -192,7 +210,7 @@ class FusionToVLM(nn.Module):
         for i, (s, l) in enumerate(zip(seqs, labs)):
             ids[i, :len(s)], lab[i, :len(l)], att[i, :len(s)] = s, l, 1
 
-        txt = embed(ids).to(soft.dtype)
+        txt = embed(ids).to(self.lm_dtype)
         inputs_embeds = torch.cat([soft, txt], dim=1)
         attention_mask = torch.cat(
             [torch.ones(B, self.n_soft, dtype=torch.long, device=dev), att], 1)

@@ -40,26 +40,29 @@ TARGET = ["Investigate the generator cooling circuit within two weeks.",
 
 
 def _cached():
-    """True only when the checkpoint is COMPLETE.
+    """True when transformers can actually load this checkpoint offline.
 
-    Directory existence is not enough. An interrupted download leaves the
-    directory in place with a `.incomplete` blob, so a presence check reports
-    cached and the suite then fails loading a truncated checkpoint -- which
-    reads as a broken bridge rather than a broken download. Requiring both a
-    real weight file and no partial blobs makes an interrupted download SKIP,
-    which is the honest outcome.
+    Asked behaviourally rather than by inspecting the cache directory, because
+    both of the obvious file-based checks are wrong:
+
+      - directory exists          -> true for a HALF-downloaded checkpoint, so
+                                     the suite fails loading a truncated model
+                                     and reads as a broken bridge
+      - no `.incomplete` blobs    -> false for a COMPLETE one, because an
+                                     interrupted download leaves an orphaned
+                                     partial beside the finished blob (measured:
+                                     a stale 1.0GB `.incomplete` sitting next to
+                                     the real 4.0GB weights) and the suite then
+                                     skips a checkpoint that works
+
+    A local-only config load answers the question the test actually has.
     """
-    d = os.path.join(CACHE, "models--" + MODEL_ID.replace("/", "--"))
-    if not os.path.isdir(d):
+    try:
+        from transformers import AutoConfig
+        AutoConfig.from_pretrained(MODEL_ID, local_files_only=True)
+        return True
+    except Exception:
         return False
-    blobs, partial = [], False
-    for root, _, files in os.walk(d):
-        for f in files:
-            if f.endswith(".incomplete"):
-                partial = True
-            elif f.endswith((".safetensors", ".bin")):
-                blobs.append(os.path.join(root, f))
-    return bool(blobs) and not partial
 
 
 _BRIDGE = None
