@@ -41,7 +41,7 @@ import torch
 import torch.nn as nn
 
 from models.vibration_encoder_2dconv import VibrationConv2dEncoder
-from models.scada_encoder_tcn import PerceiverResampler
+from models.common import PerceiverResampler
 from helpers import banner, report
 
 FS = 25600.0

@@ -40,11 +40,13 @@ import time
 # this is invoked from. Same bootstrap the test suites carry.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import numpy as np
 import torch
 import torch.nn as nn
 
 from data_io.kelmarsh_io import load_years, N_CHANNELS
-from models.scada_encoder_tcn import ScadaTCNEncoder, PerceiverResampler
+from models.scada_encoder_tcn import ScadaTCNEncoder
+from models.common import PerceiverResampler
 
 
 class OutageProbe(nn.Module):
@@ -97,7 +99,9 @@ def run(args):
     # machine a window came from does not enter it
     X, M, E, _, Y = load_years(args.root, stride=args.stride)
 
-    te = torch.from_numpy((E.year == args.test_year).values)
+    # np.asarray, not .values: DatetimeIndex.year already comes back as a plain
+    # ndarray here, and .values on it raises AttributeError
+    te = torch.from_numpy(np.asarray(E.year == args.test_year))
     tr = ~te
     if te.sum() == 0:
         raise SystemExit(f"no windows from {args.test_year}; "

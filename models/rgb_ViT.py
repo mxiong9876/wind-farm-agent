@@ -41,10 +41,18 @@ class RGBEncoder(nn.Module):
     """Frozen DINOv2 ViT -> d_model tokens the fusion can consume."""
 
     def __init__(self, d_model=128, model_name="vit_base_patch14_dinov2.lvd142m",
-                 pretrained=True, freeze_backbone=True, keep_cls=True):
+                 pretrained=True, freeze_backbone=True, keep_cls=True,
+                 dynamic_img_size=True):
         super().__init__()
+        # dynamic_img_size interpolates the position embeddings, so any size
+        # that is a multiple of the patch grid works. Without it timm hard-
+        # asserts the checkpoint's native 518x518 and every other size dies
+        # deep inside patch_embed with a message about the model, not the call.
+        # Blade photos are not going to arrive pre-cropped to 518 squares.
         self.vit = timm.create_model(model_name, pretrained=pretrained,
-                                     num_classes=0)
+                                     num_classes=0,
+                                     dynamic_img_size=dynamic_img_size)
+        self.dynamic = dynamic_img_size
         self.keep_cls = keep_cls
         self.frozen = freeze_backbone
         if freeze_backbone:
@@ -85,12 +93,19 @@ class RGBEncoder(nn.Module):
     def forward(self, x, mask=None):
         B, C, H, W = x.shape
         assert C == 3, f"expected 3 colour channels, got {C}"
-        # a patch-14 backbone silently mis-tiles a non-multiple size rather than
-        # raising, and the resulting token grid does not correspond to the image
         assert H % self.patch == 0 and W % self.patch == 0, (
             f"{H}x{W} is not a multiple of patch size {self.patch}; "
             f"resize to e.g. {H // self.patch * self.patch}x"
             f"{W // self.patch * self.patch}")
+        # with dynamic_img_size off, timm accepts ONLY the checkpoint's native
+        # size and rejects anything else inside patch_embed with a message that
+        # names the model rather than the caller. Say it here instead.
+        if not self.dynamic:
+            native = self.vit.patch_embed.img_size
+            assert (H, W) == tuple(native), (
+                f"{H}x{W} but this backbone was built with dynamic_img_size="
+                f"False, which accepts only {native[0]}x{native[1]}. "
+                f"Pass dynamic_img_size=True to allow other sizes.")
 
         if self.frozen:
             with torch.no_grad():
@@ -122,40 +137,19 @@ class RGBEncoder(nn.Module):
 
 
 if __name__ == "__main__":
+    # A demo, not a test. The checks that were here now live in
+    # tests/rgb/smoke_test.py, where a failure exits non-zero and
+    # tests/run_all.py picks it up.
     torch.manual_seed(0)
     enc = RGBEncoder(d_model=128, pretrained=False).eval()
-    x = torch.rand(2, 3, 518, 518)
-    x = enc.preprocess(x)
-
+    x = enc.preprocess(torch.rand(2, 3, 518, 518))
     with torch.no_grad():
         out = enc(x)
+
     n_tr = sum(p.numel() for p in enc.parameters() if p.requires_grad)
     n_fz = sum(p.numel() for p in enc.parameters() if not p.requires_grad)
-    print(f"tokens            {tuple(out.shape)}  = 1 CLS + "
+    print(f"tokens      {tuple(out.shape)}  = 1 CLS + "
           f"{(518 // enc.patch) ** 2} patches")
-    print(f"trainable         {n_tr:,}")
-    print(f"frozen            {n_fz:,}")
-
-    enc.train()
-    print(f"vit stays eval    {not enc.vit.training}")
-
-    # the frozen path must be deterministic in TRAIN mode too, which is the
-    # whole point of the train() override
-    with torch.no_grad():
-        a, b = enc(x), enc(x)
-    print(f"deterministic     {torch.equal(a, b)}")
-
-    out = enc(x)
-    out.sum().backward()
-    print(f"proj gets grad    {enc.proj[1].weight.grad is not None}")
-    print(f"vit gets no grad  {enc.vit.patch_embed.proj.weight.grad is None}")
-
-    with torch.no_grad():
-        dead = enc(x, mask=torch.tensor([1.0, 0.0]))
-    print(f"mask zeroes frame {bool((dead[1] == 0).all())} "
-          f"and keeps the other {bool((dead[0] != 0).any())}")
-
-    try:
-        enc(torch.rand(1, 3, 500, 500))
-    except AssertionError as e:
-        print(f"rejects bad size  {str(e)[:52]}...")
+    print(f"trainable   {n_tr:,}")
+    print(f"frozen      {n_fz:,}  ({n_tr / (n_tr + n_fz) * 100:.2f}% trainable)")
+    print(f"patch size  {enc.patch}   dynamic_img_size {enc.dynamic}")

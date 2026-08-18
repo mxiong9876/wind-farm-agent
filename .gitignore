@@ -79,6 +79,20 @@ tensorboard/
 *.xlsx
 *.xls
 
+# --- Figures ---
+# Plots are OUTPUTS: regenerable from the run's csv plus train_nbm.py
+# --plot-only, so committing them means a binary that silently drifts from the
+# numbers it claims to show. Anything under runs/ is already ignored; this
+# catches strays elsewhere.
+#
+# figures/ is the deliberate exception -- a figure you have chosen to keep for a
+# report or a deck, promoted by hand rather than dropped there by a script.
+*.png
+*.jpg
+*.svg
+*.pdf
+!figures/**
+
 # --- Secrets ---
 .env
 .env.*

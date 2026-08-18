@@ -22,7 +22,8 @@ sys.path[:0] = [_HERE, _TESTS, os.path.dirname(_TESTS)]
 import torch
 import torch.nn as nn
 
-from models.scada_encoder_tcn import ScadaTCNEncoder, PerceiverResampler
+from models.scada_encoder_tcn import ScadaTCNEncoder
+from models.common import PerceiverResampler
 from helpers import banner, report
 
 
