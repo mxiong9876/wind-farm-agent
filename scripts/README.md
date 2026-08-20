@@ -23,19 +23,9 @@ Expanded once here, then used freely.
 
 | Term | Meaning |
 |---|---|
-| **SCADA** — Supervisory Control And Data Acquisition | The turbine's own operational telemetry. At Kelmarsh, one row every 10 minutes per turbine: wind speed, power, temperatures, pitch angles. |
 | **NBM** — Normal-Behaviour Modelling | Predict what a sensor *should* read given every other sensor, then treat the **residual** (actual − predicted) as the health signal. A component running hotter than its operating conditions justify is deviating from normal. |
 | **Residual** | actual − predicted, in the sensor's own units (°C here). Near zero = behaving as conditions predict. Drifting upward over weeks = the degradation signature. |
 | **PR-AUC** — Precision-Recall Area Under Curve | The metric for rare events. Its trivial baseline is the positive rate itself (~14% here), so unlike accuracy it cannot be gamed by predicting "healthy" forever. |
-| **R²** — coefficient of determination | Share of variance explained. 0 = no better than guessing the mean; 1 = exact. Can go negative, which means worse than a constant — usually a sign that train and test are different distributions. |
-| **ViT** — Vision Transformer | The image-encoder architecture behind DINOv2, used frozen in `models/rgb_ViT.py`. |
-| **VLM** — Vision-Language Model | A model taking images *and* text and generating text. Here: a frozen Qwen3-VL that reads the fusion output as **soft tokens**. |
-| **LLM** — Large Language Model | The language half of a VLM. Used loosely below when the vision tower is not involved. |
-| **Soft tokens** | Vectors spliced into a language model's input sequence that were never in its vocabulary. The model attends over them exactly as if they were words. |
-| **Projector** | The small trainable adapter mapping the 128-dimensional fusion vector into the language model's embedding width. ~4.5M parameters against a frozen 2.1B. |
-| **Fusion / health vector** | `MultiModalFusion` collapses every present modality into one 128-dimensional vector per turbine-window. |
-| **Held-out year** | A whole calendar year excluded from training. Splitting *within* a year puts summer in train and winter in test, and every channel here has an annual cycle. |
-
 ---
 
 ## Getting data
@@ -87,7 +77,7 @@ the encoder the baseline's entire input *plus* the temporal structure.
 Writes `kelmarsh_nbm_history.csv` every epoch — not just at the end, so a run
 killed at hour two keeps everything it computed.
 
-### `train_kelmarsh.py` — the experiment that didn't
+### `train_kelmarsh.py` — the experiment that didn't work
 
 Trains the same encoder to predict forced outages within a 7-day horizon.
 
