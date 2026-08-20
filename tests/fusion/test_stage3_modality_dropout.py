@@ -3,7 +3,8 @@
 Trained only on complete turbines, a fusion head collapses onto whichever
 stream is most informative. It has no reason not to: the backup path is never
 exercised, so nothing penalises letting it rot. Then the first turbine without
-a CMS arrives and the model is worse than the SCADA-only baseline it replaced.
+vibration monitoring arrives and the model is worse than the SCADA-only
+baseline it replaced.
 
 Randomly hiding modalities during training is what prevents that. The rules it
 has to obey are narrow, and all three failure modes are silent:

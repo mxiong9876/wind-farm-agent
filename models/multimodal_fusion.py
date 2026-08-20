@@ -11,12 +11,12 @@ d = token width (128, matching both encoders)
 
 WHY A REGISTRY AND NOT A TWO-ARGUMENT FUNCTION
 
-Real fleets are ragged. One turbine has a CMS, the next does not; a blade
-camera is retrofitted to a third; an acoustic array shows up on the ten newest
-machines only. A fusion model hard-wired to "SCADA and vibration" cannot
-represent that, and generalising it later means rewriting the attention mask,
-the pooling and the training loop at once. So modalities are registered by
-name and every one of them is optional at every step.
+Real fleets are ragged. One turbine has vibration monitoring, the next does
+not; a blade camera is retrofitted to a third; an acoustic array shows up on
+the ten newest machines only. A fusion model hard-wired to "SCADA and
+vibration" cannot represent that, and generalising it later means rewriting the
+attention mask, the pooling and the training loop at once. So modalities are
+registered by name and every one of them is optional at every step.
 
 THE INTERFACE THAT MAKES THAT POSSIBLE
 
@@ -41,9 +41,10 @@ the model decides what matters.
 
 TWO KINDS OF MISSING, KEPT SEPARATE
 
-  intra-modality  a dead accelerometer on a turbine that HAS a CMS.
+  intra-modality  a dead accelerometer on a turbine that HAS vibration
+                  monitoring.
                   Already handled inside each encoder by its own channel mask.
-  inter-modality  a turbine with no CMS at all.
+  inter-modality  a turbine with no vibration hardware at all.
                   Handled here, by `present`, which gates whole K-blocks out
                   of the attention.
 
@@ -196,9 +197,9 @@ class MultiModalFusion(nn.Module):
         # instead of silently reading as a neutral all-zero modality.
         #
         # Making absence INFORMATIVE -- letting the model condition on "this
-        # turbine has no CMS, so a bearing fault cannot be ruled out" -- is a
-        # real and defensible design, but it is a different one: it means not
-        # padding these blocks at all, and it needs its own tests.
+        # turbine has no vibration monitoring, so a bearing fault cannot be
+        # ruled out" -- is a real and defensible design, but a different one:
+        # it means not padding these blocks at all, and it needs its own tests.
         self.register_buffer(
             "missing", torch.randn(len(self.names), d_model) * 0.02)
 

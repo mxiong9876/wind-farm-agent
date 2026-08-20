@@ -11,24 +11,6 @@ status logs, 2016 to mid-2021.
 
 ---
 
-## Terms
-
-Expanded once here; used freely below.
-
-| Term | Meaning |
-|---|---|
-| **SCADA** — Supervisory Control And Data Acquisition | The turbine's own telemetry. One row every 10 minutes: wind speed, power, temperatures, pitch angles, RPM. |
-| **CMS** — Condition Monitoring System | Separate high-rate accelerometers on the drivetrain, sampled around 25 kHz. Not every turbine has one — which is why the fusion treats modalities as optional. |
-| **TCN** — Temporal Convolutional Network | Stacked dilated causal convolutions. Position is baked into the geometry, so unlike a transformer it needs no positional encoding. |
-| **ViT** — Vision Transformer | The image-encoder architecture; used here frozen, via DINOv2. |
-| **VLM** — Vision-Language Model | Takes images *and* text, generates text. Here a frozen Qwen3-VL. |
-| **NBM** — Normal-Behaviour Modelling | Predict what a sensor *should* read from every other sensor; treat the **residual** (actual − predicted) as the health signal. |
-| **RevIN** — Reversible Instance Normalization | Normalizes each channel within each window. Correct for condition monitoring — you want "hotter than its own baseline", not absolute degrees. |
-| **Soft tokens** | Vectors spliced into a language model's input that were never in its vocabulary. It attends over them exactly as if they were words. |
-| **Health vector** | The fusion's output: one 128-dimensional vector per turbine-window. |
-
----
-
 ## Architecture
 
 ```
@@ -53,16 +35,45 @@ Expanded once here; used freely below.
                                │
                     health vector (128,)
                                │
-              ┌────────────────┴─────────────────┐
-              │                                  │
-        task heads                        FusionProjector
-     Linear(128, k)                      128 → 8 × 2048
-     129 params each                      4.5M params
-              │                                  │
-      fault probability                   Qwen3-VL (frozen)
-      predicted temperature                      │
-      remaining useful life              maintenance assessment
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+   diagnostic heads      control head          FusionProjector
+   Linear(128, k)        (planned)             128 → 8 × 2048
+   129 params each            │                 4.5M params
+        │              ├ yaw offset  (deg)            │
+  fault probability    ├ pitch + torque         Qwen3-VL (frozen)
+  predicted temp       └ curtailment mode              │
+  remaining life         {normal, derate, stop}  maintenance
+                                                  assessment
 ```
+
+**The two output paths have different requirements**, and the repository already
+records the difference. `RevIN` normalizes by whole-window statistics, which is
+deliberately non-causal — a change at t=500 moves the mean applied at t=100.
+That is correct for the health path, which analyses a fixed historical window
+after the fact. It is wrong for control, where future samples do not exist at
+decision time.
+
+So the control path needs three things the health path does not:
+
+| | Health path | Control path |
+|---|---|---|
+| Normalization | `RevIN`, whole-window | running statistics |
+| Causality | non-causal by design | must hold end to end |
+| Window | 4.2 days of 10-minute rows | seconds to minutes |
+
+The causality gap is measured, not assumed: `tests/scada/test_stage8_tokens.py`
+prints the leak through the full encoder as INFO rather than asserting on it,
+precisely because RevIN makes it expected. Swap in running normalization and
+that INFO becomes an assertion — which is the test that gates the control path.
+
+The sample-rate row is the awkward one. Yaw and curtailment decisions live
+comfortably at 10-minute resolution; pitch and torque loops run at Hz, six
+orders of magnitude faster than the health path's windows. Those three outputs
+likely share the representation but not the input geometry.
+
+**Nothing here is built yet.** The control head is planned; the diagnostic heads
+and the language path exist.
 
 **Why per-modality resamplers.** Encoders emit 48 to 1370 tokens — a 28× spread.
 Concatenating raw tokens into one shared resampler would make imagery 1370 of
@@ -71,9 +82,9 @@ so vibration would start at a 2% contribution and have to climb out. One
 resampler each removes the imbalance by construction.
 
 **Two kinds of missing, kept separate.** A dead accelerometer on a turbine that
-*has* a CMS is handled inside that encoder by its channel mask. A turbine with
-no CMS at all is handled by the fusion's `present` flags, which gate whole
-32-latent blocks out of every attention. Conflating them means feeding an
+*has* vibration monitoring is handled inside that encoder by its channel mask.
+A turbine with no vibration hardware at all is handled by the fusion's
+`present` flags, which gate whole 32-latent blocks out of every attention. Conflating them means feeding an
 encoder all-zeros and hoping the tokens come out neutral — they do not, because
 "this sensor reads zero" is a different claim from "this sensor does not exist".
 
@@ -181,6 +192,7 @@ conclude much, but worth reporting rather than burying.
 | Fusion | ✅ validated against an information-theoretic ceiling |
 | Kelmarsh loader | ✅ real data, 24 assertions |
 | Language-model bridge | ⚠️ wired and tested, **projector untrained** |
+| Control head | ❌ planned — needs running-statistics normalization first |
 
 The full pipeline runs end to end — four modalities through 2.1B parameters in
 about 25 seconds on a laptop. The generated text is fluent noise, because the

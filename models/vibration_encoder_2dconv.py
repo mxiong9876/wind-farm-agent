@@ -8,9 +8,9 @@ C = Channels - how many accelerometers
 L = Length   - raw samples in each snapshot (1 s at 25.6 kHz = 25600)
 P = time tokens produced per channel by the conv stack
 
-Vibration is a burst modality: the CMS wakes up, grabs a short high-rate
-snapshot, and sleeps. So unlike SCADA there is no long context to march
-through causally -- the whole snapshot is one observation, and the useful
+Vibration is a burst modality: the monitoring hardware wakes up, grabs a short
+high-rate snapshot, and sleeps. So unlike SCADA there is no long context to
+march through causally -- the whole snapshot is one observation, and the useful
 structure is in the time-FREQUENCY plane. Hence a DSP frontend followed by a
 2D conv net over (frequency, time), rather than a TCN over raw samples.
 

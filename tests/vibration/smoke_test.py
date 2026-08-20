@@ -54,7 +54,7 @@ NORM = math.sqrt(1 + DEPTH ** 2 / 2)      # RMS of (1 + DEPTH*cos), for matching
 # synthetic vibration with a LEARNABLE fault signature in it
 # ---------------------------------------------------------------------------
 def make_batch(B=4, C=8, degraded=None, seed=None):
-    """Fake CMS snapshots where degraded windows carry a modulated resonance.
+    """Fake vibration snapshots where degraded windows carry a modulated resonance.
 
     A pure-noise batch would let a broken model 'pass' by predicting the mean,
     and an amplitude difference would let it pass by reading the level token.
